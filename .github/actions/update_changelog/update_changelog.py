@@ -124,7 +124,13 @@ def update_changelog(changelog_path, pr_data):
     to_file(changelog_path, changelog)
 
 def run_command(command):
-    result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    try:
+        result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    except subprocess.CalledProcessError as e:
+        print(f"::error::Command failed with exit code {e.returncode}: {e.stderr.decode()}")
+        print(f"::error::Command: {e.cmd}")
+        print(f"::error::Output: {e.stdout.decode()}")
+        sys.exit(1)
     return result.stdout.decode().strip()
 
 def branch_exists(branch_name):
