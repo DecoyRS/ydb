@@ -20,7 +20,6 @@ on:
 
 env:
   GH_TOKEN: ${{ secrets.GH_TOKEN }}
-  SINCE_DATE: ${{ github.event.inputs.start }}
 
 jobs:
   gather-prs:
@@ -31,13 +30,14 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Get merged PRs based on branch creation date
+      - name: Get merged PRs
         id: pr-list
         run: |
-          echo "::notice:: branch = ${GITHUB_REF_NAME}, date = $SINCE_DATE
-                    TYPE="${{ github.event.inputs.type }}"
+          TYPE="${{ github.event.inputs.type }}"
           START="${{ github.event.inputs.start }}"
           BRANCH="${GITHUB_REF_NAME}"
+
+          echo "::notice:: branch = ${GITHUB_REF_NAME}, start = $START"
 
           if [ "$TYPE" == "date" ]; then
             echo "Getting PRs since date: $START"
@@ -80,11 +80,6 @@ jobs:
       - name: Check out the repository
         uses: actions/checkout@v4
 
-      - name: Get current date
-        id: get-date
-        shell: bash
-        run: echo "suffix=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
-
       - name: Update Changelog
         uses: ./.github/actions/update_changelog 
         env:
@@ -93,4 +88,4 @@ jobs:
           pr_data: "${{ needs.gather-prs.outputs.prs }}"
           changelog_path: "${{ github.event.inputs.changelog_path }}"
           base_branch: "${GITHUB_REF_NAME}"
-          suffix: "${{ env.SINCE_DATE }}"
+          suffix: "${{ github.event.inputs.start }}"
