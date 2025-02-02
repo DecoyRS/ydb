@@ -20,7 +20,7 @@ def get_github_repo():
 
 @functools.cache
 def get_github_api_url():
-    return subprocess.run(["git", "config", "--get", "remote.origin.url"], capture_output=True, text=True).stdout.strip().split(':')[1].replace('//github.com/', '').replace('.git', '')
+    return get_github_repo().split(':')[1].replace('//github.com/', '').replace('.git', '')
 
 def to_dict(changelog_path):
     changelog = {}
@@ -114,6 +114,8 @@ def update_changelog(changelog_path, pr_data):
             category = match_pr_to_changelog_category(category)
             body = extract_changelog_body(pr["body"])
             if category and body:
+                body += f" [PR #{pr['number']}](TODO:Add link)"
+                body += f" by [TODO:Add author](TODO:Add author link)"
                 if category not in changelog[UNRELEASED]:
                     changelog[UNRELEASED][category] = {}
                 if pr['number'] not in changelog[UNRELEASED][category]:
@@ -174,14 +176,16 @@ if __name__ == "__main__":
     update_changelog(changelog_path, pr_data)
 
     branch_name = f"docs-for-{base_branch}-{suffix}"
-    if branch_exists(branch_name):
-        run_command(f"git checkout {branch_name}")
-    else:
-        run_command(f"git checkout -b {branch_name}")
+    index = 1
+    while branch_exists(branch_name):
+        branch_name += f"-{index}"
+    run_command(f"git checkout -b {branch_name}")
     run_command(f"git add {changelog_path}")
     run_command(f"git commit -m \"Update CHANGELOG.md for {suffix}\"")
     run_command(f"git push origin {branch_name}")
 
     pr_title = f"Update CHANGELOG.md for {suffix}"
     pr_body = f"This PR updates the CHANGELOG.md file for {suffix}."
-    run_command(f"gh pr create --title \"{pr_title}\" --body \"{pr_body}\" --base {base_branch} --head {branch_name}")
+    pr_create_command = f"gh pr create --title \"{pr_title}\" --body \"{pr_body}\" --base {base_branch} --head {branch_name}"
+    pr_url = run_command(pr_create_command)
+    # run_command(f"gh pr edit {pr_url} --add-assignee galnat") # TODO: Make assignee customizable
