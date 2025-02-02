@@ -30,6 +30,8 @@ def to_dict(changelog_path, encoding='utf-8'):
     pr_number = None
     changelog[current_version] = {}
     changelog[current_version][current_category] = {}
+    if not os.path.exists(changelog_path):
+        return changelog
 
     with open(changelog_path, 'r', encoding=encoding) as file:
         for line in file:
