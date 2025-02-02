@@ -7,7 +7,7 @@ on:
         description: "Type of when to retreive commits from"
         options: ["date", "tag", "commit"]
         required: true
-        type: option
+        type: choice
         default: "date"
       start:
         description: "Date '2021-01-01' or tag 'v1.0.0' or commit 'sha'"
