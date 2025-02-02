@@ -13,7 +13,7 @@ UNRELEASED = "Unreleased"
 UNCATEGORIZED = "Uncategorized"
 VERSION_PREFIX = "## "
 CATEGORY_PREFIX = "### "
-ITEM_PREFIX = "- #"
+ITEM_PREFIX = "* "
 
 @functools.cache
 def get_github_repo():
@@ -23,13 +23,15 @@ def get_github_repo():
 def get_github_api_url():
     return get_github_repo().split(':')[1].replace('//github.com/', '').replace('.git', '')
 
-def to_dict(changelog_path):
+def to_dict(changelog_path, encoding='utf-8'):
     changelog = {}
     current_version = UNRELEASED
     current_category = UNCATEGORIZED
     pr_number = None
+    changelog[current_version] = {}
+    changelog[current_version][current_category] = {}
 
-    with open(changelog_path, 'r') as file:
+    with open(changelog_path, 'r', encoding=encoding) as file:
         for line in file:
             if line.startswith(VERSION_PREFIX):
                 current_version = line.strip().strip(VERSION_PREFIX)
@@ -48,10 +50,24 @@ def to_dict(changelog_path):
     return changelog
 
 def to_file(changelog_path, changelog):
-    with open(changelog_path, 'w') as file:
+    with open(changelog_path, 'w', encoding='utf-8') as file:
+        if UNRELEASED in changelog:
+            file.write(f"{VERSION_PREFIX}{UNRELEASED}\n\n")
+            for category, items in changelog[UNRELEASED].items():
+                if(len(changelog[UNRELEASED][category]) == 0):
+                    continue
+                file.write(f"{CATEGORY_PREFIX}{category}\n")
+                for id, body in items.items():
+                    file.write(f"{ITEM_PREFIX}{id}:{body.strip()}\n")
+                file.write("\n")
+
         for version, categories in changelog.items():
+            if version == UNRELEASED:
+                continue
             file.write(f"{VERSION_PREFIX}{version}\n\n")
             for category, items in categories.items():
+                if(len(changelog[version][category]) == 0):
+                    continue
                 file.write(f"{CATEGORY_PREFIX}{category}\n")
                 for id, body in items.items():
                     file.write(f"{ITEM_PREFIX}{id}:{body.strip()}\n")
@@ -115,8 +131,8 @@ def update_changelog(changelog_path, pr_data):
             category = match_pr_to_changelog_category(category)
             body = extract_changelog_body(pr["body"])
             if category and body:
-                body += f" [PR #{pr['number']}]({pr['url']})"
-                body += f" by [{pr['name']}]({pr['user_url']})"
+                body += f" [#{pr['number']}]({pr['url']})"
+                body += f" ([{pr['name']}]({pr['user_url']}))"
                 if category not in changelog[UNRELEASED]:
                     changelog[UNRELEASED][category] = {}
                 if pr['number'] not in changelog[UNRELEASED][category]:
