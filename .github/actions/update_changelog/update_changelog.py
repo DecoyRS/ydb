@@ -13,6 +13,7 @@ UNRELEASED = "Unreleased"
 UNCATEGORIZED = "Uncategorized"
 VERSION_PREFIX = "## "
 CATEGORY_PREFIX = "### "
+ITEM_PREFIX = "- #"
 
 @functools.cache
 def get_github_repo():
@@ -38,9 +39,9 @@ def to_dict(changelog_path):
                 current_category = line.strip().strip(CATEGORY_PREFIX)
                 pr_number = None
                 changelog[current_version][current_category] = {}
-            elif line.startswith("- "):
+            elif line.startswith(ITEM_PREFIX):
                 pr_number = extract_pr_number(line)
-                changelog[current_version][current_category][pr_number] = line.strip(f"- PR #{pr_number}:")
+                changelog[current_version][current_category][pr_number] = line.strip(f"{ITEM_PREFIX}{pr_number}:")
             elif pr_number:
                 changelog[current_version][current_category][pr_number] += f"{line}"
     
@@ -53,7 +54,7 @@ def to_file(changelog_path, changelog):
             for category, items in categories.items():
                 file.write(f"{CATEGORY_PREFIX}{category}\n")
                 for id, body in items.items():
-                    file.write(f"- PR #{id}:{body.strip()}\n")
+                    file.write(f"{ITEM_PREFIX}{id}:{body.strip()}\n")
                 file.write("\n")
 
 def extract_changelog_category(description):
@@ -114,8 +115,8 @@ def update_changelog(changelog_path, pr_data):
             category = match_pr_to_changelog_category(category)
             body = extract_changelog_body(pr["body"])
             if category and body:
-                body += f" [PR #{pr['number']}](TODO:Add link)"
-                body += f" by [TODO:Add author](TODO:Add author link)"
+                body += f" [PR #{pr['number']}]({pr['url']})"
+                body += f" by [{pr['name']}]({pr['user_url']})"
                 if category not in changelog[UNRELEASED]:
                     changelog[UNRELEASED][category] = {}
                 if pr['number'] not in changelog[UNRELEASED][category]:
@@ -147,6 +148,16 @@ def fetch_pr_details(pr_id):
     response.raise_for_status()
     return response.json()
 
+def fetch_user_details(username):
+    url = f"https://api.github.com/users/{username}"
+    headers = {
+        "Accept": "application/vnd.github.v3+json",
+        "Authorization": f"token {GITHUB_TOKEN}"
+    }
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    return response.json()
+
 if __name__ == "__main__":
     if len(sys.argv) != 5:
         print("Usage: update_changelog.py <pr_data_file> <changelog_path> <base_branch> <suffix>")
@@ -170,10 +181,14 @@ if __name__ == "__main__":
     for pr in pr_ids:
         try:
             pr_details = fetch_pr_details(pr["id"])
+            user_details = fetch_user_details(pr_details["user"]["login"])
             if validate_pr_description(pr_details["body"], is_not_for_cl_valid=False):
                 pr_data.append({
                     "number": pr_details["number"],
-                    "body": pr_details["body"].strip()
+                    "body": pr_details["body"].strip(),
+                    "url": pr_details["html_url"],
+                    "name": user_details.get("name", pr_details["user"]["login"]),  # Use login if name is not available
+                    "user_url": pr_details["user"]["html_url"]
                 })
         except Exception as e:
             print(f"::error::Failed to fetch PR details for PR #{pr['id']}: {e}")
