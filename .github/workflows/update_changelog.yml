@@ -3,8 +3,11 @@ name: Update Changelog
 on:
   workflow_dispatch:
     inputs:
-      start_date:
-        description: "Start date for the changelog update in a format like '2021-01-01'"
+      type:
+        description: "Type of when to retreive commits from"
+        options: ["date", "tag", "commit"]
+      start:
+        description: "Date '2021-01-01' or tag 'v1.0.0' or commit 'sha'"
         required: true
       changelog_path:
         description: "The value associated with the type."
@@ -17,7 +20,7 @@ on:
 
 env:
   GH_TOKEN: ${{ secrets.GH_TOKEN }}
-  SINCE_DATE: ${{ github.event.inputs.start_date }}
+  SINCE_DATE: ${{ github.event.inputs.start }}
 
 jobs:
   gather-prs:
@@ -27,123 +30,30 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 200
-
-      - name: Fetch commits since the ${{ env.SINCE_DATE }}
-        run: |
-          # Fetch all commits since the ${{ env.SINCE_DATE }}
-          git fetch --shallow-since="$SINCE_DATE"
-
-      - name: Get parent branch and branch creation date
-        id: branch-info
-        run: |
-
-          # Get the current branch name
-          branch_name=${GITHUB_REF_NAME}
-
-          echo "Current branch: $branch_name"
-
-          # Get the timestamp for 1 week ago
-          start_date=${{ env.SINCE_DATE }}
-
-          # Start with the latest commit
-          commit=$(git rev-parse HEAD)
-          parent_branch=""
-
-          while true; do
-            echo "Analyzing commit: $commit"
-
-            # Get the commit date in seconds since the epoch
-            commit_date=$(git show -s --format=%ct $commit)
-
-            # Break if the commit is older than 1 week
-            if [ $commit_date -lt $start_date ]; then
-              echo "Reached the date limit. Stopping search."
-              break
-            fi
-
-            # Check for the parent branches of the current commit
-            parents=$(git rev-list --parents -n 1 $commit)
-            echo "parents $parents"
-
-            # If there's only one commit hash, it's the root commit
-            if [ $(echo "$parents" | wc -w) -eq 1 ]; then
-              echo "Root commit found: $commit"
-              break
-            fi
-
-            # If there's only one parent, continue traversing
-            if [ $(echo "$parents" | wc -w) -eq 2 ]; then
-              commit=$(echo "$parents" | awk '{print $2}')
-              echo "new commit $commit"
-            else
-              # If multiple parents are found, it's a merge commit
-              echo "multiple parents $parents"
-              parent_commit=$(echo "$parents" | awk '{print $2}')
-              echo "parent commit $parent_commit"
-              branches=$(git branch -r --contains $parent_commit | grep -v $branch_name || true)
-              echo "branches $branches"
-              if [ -z "$branches" ]; then
-                echo "No branches found for the parent commit: $parent_commit"
-                commit=$parent_commit
-                continue
-              else
-                echo "Branches found for the parent commit: $parent_commit"
-                echo "branches $branches"
-              fi
-
-              # Iterate through branches to find "main" or "stable-*"
-              for branch in $branches; do
-                branch=$(echo "$branch"| sed 's/^[ \t]*//;s/[ \t]*$//' | sed 's/^origin\///' )
-                echo "::notice::branch $branch"
-                if [[ "$branch" == "$branch_name" ]]; then
-                  echo "Skipping current branch: $branch"
-                  continue
-                fi
-                if [[ "$branch" == *"main"* || "$branch" == *"stable-"* ]]; then
-                  parent_branch=$branch
-                  echo "::notice::parent branch $parent_branch"
-                  break
-                fi
-              done
-
-              # If a matching parent branch is found, break the loop
-              if [ -n "$parent_branch" ]; then
-                echo "::notice:: Parent branch is either 'main' or starts with 'stable-'"
-                break
-              else
-                # Continue traversing if no matching parent branch is found
-                commit=$parent_commit
-              fi
-            fi
-          done
-
-          # Output the parent branch or root commit
-          if [ -n "$parent_branch" ]; then
-            echo "::notice:: Parent branch detected: $parent_branch"
-          else
-            echo "::notice:: No parent branch found. This might be the root branch."
-          fi
-
-          if [ -n "$parent_branch" ]; then
-            $(git fetch origin $parent_branch:$parent_branch)
-            BRANCH_CREATION_DATE=$(git log --reverse --format=%cI $parent_branch..${GITHUB_REF_NAME} | head -n 1)
-          else
-            BRANCH_CREATION_DATE=$SINCE_DATE
-          fi
-          echo "BRANCH_CREATION_DATE=$BRANCH_CREATION_DATE" >> $GITHUB_ENV
-          # Save the parent branch to an environment variable
-          echo "PARENT_BRANCH=${parent_branch}" >> $GITHUB_ENV
 
       - name: Get merged PRs based on branch creation date
         id: pr-list
         run: |
-          echo "::notice:: branch = ${GITHUB_REF_NAME}, date = $SINCE_DATE, parent = $PARENT_BRANCH, creation date = $BRANCH_CREATION_DATE"
-          if [ -z "$BRANCH_CREATION_DATE" ]; then
-            PRS=$(gh pr list --state merged --json number,title,baseRefName,mergedAt --jq ".[] | select(.baseRefName == \"${GITHUB_REF_NAME}\" and .mergedAt >= \"$SINCE_DATE\") | {id: .number}" | jq -c -s ".")
+          echo "::notice:: branch = ${GITHUB_REF_NAME}, date = $SINCE_DATE
+                    TYPE="${{ github.event.inputs.type }}"
+          START="${{ github.event.inputs.start }}"
+          BRANCH="${GITHUB_REF_NAME}"
+
+          if [ "$TYPE" == "date" ]; then
+            echo "Getting PRs since date: $START"
+            PRS=$(gh pr list --state merged --json number,title,baseRefName,mergedAt --jq ".[] | select(.baseRefName == \"$BRANCH\" and .mergedAt >= \"$START\") | {id: .number}" | jq -c -s ".")
+          elif [ "$TYPE" == "tag" ]; then
+            echo "Fetching tags from remote"
+            git fetch --tags
+            echo "Getting PRs since tag: $START"
+            COMMIT=$(git rev-list -n 1 $START)
+            PRS=$(gh pr list --state merged --json number,title,baseRefName,mergedAt --jq ".[] | select(.baseRefName == \"$BRANCH\" and .mergeCommit.oid >= \"$COMMIT\") | {id: .number}" | jq -c -s ".")
+          elif [ "$TYPE" == "commit" ]; then
+            echo "Getting PRs since commit: $START"
+            PRS=$(gh pr list --state merged --json number,title,baseRefName,mergedAt --jq ".[] | select(.baseRefName == \"$BRANCH\" and .mergeCommit.oid >= \"$START\") | {id: .number}" | jq -c -s ".")
           else
-            PRS=$(gh pr list --state merged --json number,title,baseRefName,mergedAt --jq ".[] | select((.baseRefName == \"$PARENT_BRANCH\" and .mergedAt >= \"$SINCE_DATE\" and .mergedAt < \"$BRANCH_CREATION_DATE\") or (.baseRefName == \"${GITHUB_REF_NAME}\" and .mergedAt >= \"$BRANCH_CREATION_DATE\")) | {id: .number}" | jq -c -s ".")
+            echo "::error::Invalid type: $TYPE"
+            exit 1
           fi
 
           if [ -z "$PRS" ]; then

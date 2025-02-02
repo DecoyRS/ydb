@@ -18,22 +18,12 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 200
 
       - name: Set up date range
         id: date-setup
         run: |
           LAST_WEEK_DATE=$(date -d "14 days ago" '+%Y-%m-%dT%H:%M:%SZ')
           echo "LAST_WEEK_DATE=$LAST_WEEK_DATE" >> $GITHUB_ENV
-
-      - name: Fetch commits from the last 14 days
-        run: |
-          # Calculate the date 14 days ago
-          date_since=$(date -d '14 days ago' --utc +%Y-%m-%dT%H:%M:%SZ)
-
-          # Fetch all commits since the last 14 days
-          git fetch --shallow-since="$LAST_WEEK_DATE"
 
       - name: Get merged PRs based on branch creation date
         id: pr-list
