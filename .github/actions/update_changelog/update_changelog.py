@@ -128,8 +128,8 @@ def run_command(command):
     return result.stdout.decode().strip()
 
 def branch_exists(branch_name):
-    result = subprocess.run(f"git branch --list {branch_name}", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    return result.stdout.decode().strip() != ""
+    result = subprocess.run(["git", "ls-remote", "--heads", "origin", branch_name], capture_output=True, text=True)
+    return branch_name in result.stdout
 
 def fetch_pr_details(pr_id):
     url = f"https://api.github.com/repos/{get_github_api_url()}/pulls/{pr_id}"
@@ -175,10 +175,11 @@ if __name__ == "__main__":
 
     update_changelog(changelog_path, pr_data)
 
-    branch_name = f"docs-for-{base_branch}-{suffix}"
+    base_branch_name = f"changelog-for-{base_branch}-{suffix}"
+    branch_name = base_branch_name
     index = 1
     while branch_exists(branch_name):
-        branch_name += f"-{index}"
+        branch_name = f"{base_branch_name}-{index}"
     run_command(f"git checkout -b {branch_name}")
     run_command(f"git add {changelog_path}")
     run_command(f"git commit -m \"Update CHANGELOG.md for {suffix}\"")
