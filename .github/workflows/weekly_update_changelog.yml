@@ -28,7 +28,7 @@ jobs:
       - name: Get merged PRs based on branch creation date
         id: pr-list
         run: |
-          echo "::notice:: branch = ${GITHUB_REF_NAME}, date = $LAST_WEEK_DATE
+          echo "::notice:: branch = ${GITHUB_REF_NAME}, date = $LAST_WEEK_DATE"
           PRS=$(gh pr list --state merged --json number,title,baseRefName,mergedAt --jq ".[] | select(.baseRefName == \"${GITHUB_REF_NAME}\" and .mergedAt >= \"$LAST_WEEK_DATE\") | {id: .number}" | jq -c -s ".")
 
           if [ -z "$PRS" ]; then
