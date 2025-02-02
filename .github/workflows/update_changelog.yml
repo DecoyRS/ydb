@@ -19,7 +19,7 @@ on:
       prefix:
         description: "Prefix for the changelog update"
         required: true
-        default: "docs-for-"
+        default: "changelog-for-"
 
 env:
   GH_TOKEN: ${{ secrets.GH_TOKEN }}
