@@ -4,6 +4,9 @@ import json
 import re
 import subprocess
 import requests
+
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../validate_pr_description")))
 from validate_pr_description import validate_pr_description
 
 UNRELEASED = "Unreleased"
