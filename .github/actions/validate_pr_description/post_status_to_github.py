@@ -15,15 +15,12 @@ def post(is_valid, error_description):
 
     header = f"<!-- status pr={pr.number}, validate PR description status -->"
 
-    body = comment = None
+    body = [header]
+    comment = None
     for c in pr.get_issue_comments():
         if c.body.startswith(header):
             print(f"found comment id={c.id}")
             comment = c
-            body = [c.body]
-
-    if body is None:
-        body = [header]
 
     status_to_header = {
         True: "Validation successful",
@@ -36,7 +33,7 @@ def post(is_valid, error_description):
     body.append(f"{indicator} `{timestamp_str}` {status_to_header[is_valid]}")
 
     if not is_valid:
-        body += f"\n{error_description}"
+        body.append(f"\n{error_description}")
 
     body = "\n".join(body)
 
