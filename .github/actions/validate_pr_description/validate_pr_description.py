@@ -2,6 +2,8 @@ import sys
 import re
 from typing import Tuple
 
+print("::warning:: Branch script logic is used")
+
 issue_patterns = [
     r"https://github.com/ydb-platform/ydb/issues/\d+",
     r"https://st.yandex-team.ru/[a-zA-Z]+-\d+"

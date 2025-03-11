@@ -3,6 +3,10 @@ name: "validate-pr-description"
 runs:
   using: "composite"
   steps:
+    - name: Check logic
+      shell: bash
+      run: |
+        echo "::warning:: Branch action logic is used"
     - name: Save PR body to temporary file
       shell: bash
       run: |
@@ -26,6 +30,3 @@ outputs:
   status:
     description: "The status of the PR description validation."
     value: ${{ steps.validate.outcome }}
-
-files:
-  - validate_pr_description.py
