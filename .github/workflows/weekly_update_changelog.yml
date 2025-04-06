@@ -21,7 +21,7 @@ jobs:
       - name: List 'main' and 'stable-*' branches
         id: branch-list
         run: |
-          BRANCHES=$(git branch -r | grep -E 'origin/(main|stable-)' | sed 's/origin\///' | jq -c -s ".")
+          BRANCHES=$(git branch -r | grep -E "origin/(main|stable(-[0-9]*)*)$" | grep -v HEAD | sed "s/origin\///" | xargs | jq -R -s -c "split(\" \")")
           if [ -z "$BRANCHES" ]; then
             BRANCHES="[]"
           fi
