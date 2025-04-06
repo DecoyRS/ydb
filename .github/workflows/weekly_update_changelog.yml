@@ -27,7 +27,7 @@ jobs:
           $(gh workflow run update_changelog.yml -r main -f start=$LAST_WEEK_DATE)
 
       - name: Run workflow on 'stable-' branches
-        run:
+        run: |
           BRANCHES=$(git branch -r | grep 'origin/stable-' | sed 's/origin\///')
           echo "branches = $BRANCHES"
           for branch in $BRANCHES; do
