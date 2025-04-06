@@ -11,22 +11,22 @@ jobs:
   gather-branches:
     runs-on: ubuntu-latest
 
-  outputs:
-    branches: ${{ steps.branch-list.outputs.branches }}
+    outputs:
+      branches: ${{ steps.branch-list.outputs.branches }}
 
-  steps:
-    - name: Check out repository
-      uses: actions/checkout@v4
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
 
-    - name: List 'main' and 'stable-*' branches
-      id: branch-list
-      run: |
-        BRANCHES=$(git branch -r | grep -E 'origin/(main|stable-)' | sed 's/origin\///' | jq -c -s ".")
-        if [ -z "$BRANCHES" ]; then
-          BRANCHES="[]"
-        fi
-        echo "$BRANCHES" > branches.json
-        echo "branches=$BRANCHES" >> "$GITHUB_OUTPUT"
+      - name: List 'main' and 'stable-*' branches
+        id: branch-list
+        run: |
+          BRANCHES=$(git branch -r | grep -E 'origin/(main|stable-)' | sed 's/origin\///' | jq -c -s ".")
+          if [ -z "$BRANCHES" ]; then
+            BRANCHES="[]"
+          fi
+          echo "$BRANCHES" > branches.json
+          echo "branches=$BRANCHES" >> "$GITHUB_OUTPUT"
 
   gather-prs:
     runs-on: ubuntu-latest
