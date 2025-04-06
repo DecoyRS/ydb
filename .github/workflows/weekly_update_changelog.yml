@@ -32,5 +32,5 @@ jobs:
           echo "branches = $BRANCHES"
           for branch in $BRANCHES; do
             echo "Running workflow on $branch"
-            $(gh workflow run update_changelog.yml -f start=$LAST_WEEK_DATE -r $branch)
+            $(gh workflow run update_changelog.yml -f start="$LAST_WEEK_DATE" -r "$branch")
           done
