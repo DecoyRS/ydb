@@ -19,7 +19,7 @@ jobs:
       - name: Set up date range
         id: date-setup
         run: |
-          LAST_WEEK_DATE=$(date -d "7 days ago" '%Y-%m-%d')
+          LAST_WEEK_DATE=$(date -d "7 days ago" '+%Y-%m-%d')
           echo "LAST_WEEK_DATE=$LAST_WEEK_DATE" >> $GITHUB_ENV
 
       - name: Update changelog for 'main' branch
