@@ -21,7 +21,8 @@ jobs:
       - name: List 'main' and 'stable-*' branches
         id: branch-list
         run: |
-          BRANCHES=$(git branch -r | grep -E "origin/(main|stable-25(-[0-9]*)*)$" | grep -v HEAD | sed "s/origin\///" | xargs | jq -R -s -c "split(\" \")")
+          BRANCHES=$(git branch -r | grep -E "origin/(main|stable-25(-[0-9]+)*)$" | grep -v HEAD | sed "s/origin\///" | xargs | jq -R -s -c "split(\" \")")
+          echo "::notice:: BRANCHES $BRANCHES"
           if [ -z "$BRANCHES" ]; then
             BRANCHES="[]"
           fi
@@ -46,7 +47,7 @@ jobs:
       - name: Pass branch name
         id: branch-name
         run: |
-          echo "branch=${{ matrix.branch }}" >> "$GITHUB_OUTPUT"
+          echo "base_branch=${{ matrix.branch }}" >> "$GITHUB_OUTPUT"
 
       - name: Set up date range
         id: date-setup
@@ -84,6 +85,8 @@ jobs:
     steps:
       - name: Check out the repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.branch-name.outputs.base_branch }}
 
       - name: Get current date
         id: get-date
