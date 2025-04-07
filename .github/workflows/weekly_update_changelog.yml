@@ -58,9 +58,9 @@ jobs:
       - name: Get merged PRs
         id: pr-list
         run: |
-          echo "::notice:: branch = ${GITHUB_REF_NAME}, date = $LAST_WEEK_DATE"
           REF_NAME=${{ matrix.branch }}
-          PRS=$(gh pr list --state merged --json number,title,baseRefName,mergedAt --jq ".[] | select(.baseRefName == \"${REF_NAME}\" and .mergedAt >= \"$LAST_WEEK_DATE\") | {id: .number}" | jq -c -s ".")
+          echo "::notice:: branch = $REF_NAME, date = $LAST_WEEK_DATE"
+          PRS=$(gh pr list --state merged --json number,title,baseRefName,mergedAt --jq ".[] | select(.baseRefName == \"$REF_NAME\" and .mergedAt >= \"$LAST_WEEK_DATE\") | {id: .number}" | jq -c -s ".")
 
           if [ -z "$PRS" ]; then
             PRS="[]"
