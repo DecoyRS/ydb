@@ -21,7 +21,7 @@ jobs:
       - name: List 'main' and 'stable-*' branches
         id: branch-list
         run: |
-          BRANCHES=$(git branch -r | grep -E "origin/(main|stable(-[0-9]*)*)$" | grep -v HEAD | sed "s/origin\///" | xargs | jq -R -s -c "split(\" \")")
+          BRANCHES=$(git branch -r | grep -E "origin/(main|stable-25(-[0-9]*)*)$" | grep -v HEAD | sed "s/origin\///" | xargs | jq -R -s -c "split(\" \")")
           if [ -z "$BRANCHES" ]; then
             BRANCHES="[]"
           fi
@@ -36,11 +36,17 @@ jobs:
         branch: ${{ fromJson(needs.gather-branches.outputs.branches) }}
     outputs:
       prs: ${{ steps.pr-list.outputs.prs }}
+      base_branch: ${{ steps.branch-name.outputs.base_branch }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
           ref: ${{ matrix.branch }}
+
+      - name: Pass branch name
+        id: branch-name
+        run: |
+          echo "branch=${{ matrix.branch }}" >> "$GITHUB_OUTPUT"
 
       - name: Set up date range
         id: date-setup
@@ -52,7 +58,8 @@ jobs:
         id: pr-list
         run: |
           echo "::notice:: branch = ${GITHUB_REF_NAME}, date = $LAST_WEEK_DATE"
-          PRS=$(gh pr list --state merged --json number,title,baseRefName,mergedAt --jq ".[] | select(.baseRefName == \"${GITHUB_REF_NAME}\" and .mergedAt >= \"$LAST_WEEK_DATE\") | {id: .number}" | jq -c -s ".")
+          REF_NAME=${{ matrix.branch }}
+          PRS=$(gh pr list --state merged --json number,title,baseRefName,mergedAt --jq ".[] | select(.baseRefName == \"${REF_NAME}\" and .mergedAt >= \"$LAST_WEEK_DATE\") | {id: .number}" | jq -c -s ".")
 
           if [ -z "$PRS" ]; then
             PRS="[]"
@@ -90,5 +97,5 @@ jobs:
         with:
           pr_data: "${{ needs.gather-prs.outputs.prs }}"
           changelog_path: "./CHANGELOG.md" # RODO: Use the correct path to your CHANGELOG.md file
-          base_branch: "${{ github.ref_name }}"
+          base_branch: "${{ needs.branch-name.outputs.base_branch }}"
           suffix: "${{ env.suffix }}"
