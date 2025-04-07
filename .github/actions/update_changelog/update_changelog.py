@@ -184,8 +184,6 @@ if __name__ == "__main__":
             pr_ids = json.load(file)
     except Exception as e:
         print(f"::error::Failed to read or parse PR data file: {e}")
-        with open(pr_data_file, 'r') as file:
-            print(f"::error::Contents of the file: {file.read()}")
         sys.exit(1)
 
     pr_data = []
