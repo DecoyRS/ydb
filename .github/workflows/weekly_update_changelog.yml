@@ -22,7 +22,7 @@ jobs:
         id: branch-list
         run: |
           git fetch --all
-          BRANCHES=$(git branch -r | grep -E "origin/(main|stable-25(-[0-9]+)*)$" | grep -v HEAD | sed "s/origin\///" | xargs | jq -R -s -c "split(\" \")")
+          BRANCHES=$(git branch -r | grep -E "origin/(main|stable-25(-[0-9]+)*)$" | grep -v HEAD | sed "s/origin\///" | xargs | tr -d '\n' | jq -R -s -c "split(\" \")")
           echo "::notice:: BRANCHES $BRANCHES"
           if [ -z "$BRANCHES" ]; then
             BRANCHES="[]"
