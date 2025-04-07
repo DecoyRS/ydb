@@ -45,11 +45,6 @@ jobs:
         with:
           ref: ${{ matrix.branch }}
 
-      - name: Pass branch name
-        id: branch-name
-        run: |
-          echo "base_branch=${{ matrix.branch }}" >> "$GITHUB_OUTPUT"
-
       - name: Set up date range
         id: date-setup
         run: |
@@ -66,28 +61,19 @@ jobs:
           if [ -z "$PRS" ]; then
             PRS="[]"
           fi
-          echo "$PRS" > prs.json
+          echo "$PRS" > prs-${{ matrix.branch }}.json
+          echo "PRS=$PRS" >> $GITHUB_ENV          
           echo "prs=$PRS" >> "$GITHUB_OUTPUT"
 
       - name: Debug PR list output
         run: |
-          cat prs.json
+          cat prs-${{ matrix.branch }}.json
 
       - name: Upload PRs JSON
         uses: actions/upload-artifact@v4
         with:
-          name: prs-json
-          path: prs.json
-
-  update-changelog:
-    needs: gather-prs
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check out the repository
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.branch-name.outputs.base_branch }}
+          name: prs-json-${{ matrix.branch }}
+          path: prs-${{ matrix.branch }}.json
 
       - name: Get current date
         id: get-date
@@ -99,7 +85,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.YDBOT_TOKEN }}
         with:
-          pr_data: "${{ needs.gather-prs.outputs.prs }}"
+          pr_data: "$PRS"
           changelog_path: "./CHANGELOG.md" # RODO: Use the correct path to your CHANGELOG.md file
-          base_branch: "${{ needs.branch-name.outputs.base_branch }}"
+          base_branch: "${{ matrix.branch }}"
           suffix: "${{ env.suffix }}"
