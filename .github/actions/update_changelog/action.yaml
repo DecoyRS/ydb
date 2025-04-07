@@ -34,7 +34,7 @@ runs:
       shell: bash
       run: |
         echo "::notice:: inputs.pr_data: ${{ inputs.pr_data }}"
-        printf "%s" "${{ inputs.pr_data }}" > pr_data.txt
+        echo '${{ inputs.pr_data }}' > pr_data.txt
         echo "::notice:: pr_data.txt $(cat pr_data.txt)"
 
     - name: Run update_changelog.py
