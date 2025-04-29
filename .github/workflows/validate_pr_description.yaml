@@ -1,0 +1,79 @@
+name: Validate PR Description
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+
+    branches:
+      - main
+      - "stable-*"
+
+jobs:
+  validate-pr-description:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate PR description
+        id: validate-description
+        run: |
+          DESCRIPTION="${{ github.event.pull_request.body }}"
+
+          if [[ -z "$DESCRIPTION" ]]; then
+            echo "::warning::PR description is empty. Please fill it out."
+            exit 1
+          fi
+
+          if ! echo "$DESCRIPTION" | grep -q "### Changelog entry"; then
+            echo "::warning::Missing ### Changelog entry."
+            exit 1
+          fi
+
+          if ! echo "$DESCRIPTION" | grep -q "### Changelog category"; then
+            echo "::warning::Missing ### Changelog category."
+            exit 1
+          fi
+
+          CATEGORY=$(echo "$DESCRIPTION" | sed -n '/### Changelog category/,$p' | grep -Eo "\* .+" | sed 's/^\* //')
+
+          if [[ -z "$CATEGORY" ]]; then
+            echo "::warning::Changelog category is not selected."
+            exit 1
+          fi
+
+          VALID_CATEGORIES=(
+            "New feature"
+            "Experimental feature"
+            "Improvement"
+            "Performance improvement"
+            "Bugfix"
+            "Backward incompatible change"
+            "Documentation (changelog entry is not required)"
+            "Not for changelog (changelog entry is not required)"
+          )
+
+          if [[ ! " ${VALID_CATEGORIES[@]} " =~ " ${CATEGORY} " ]]; then
+            echo "::warning::Invalid Changelog category: $CATEGORY"
+            exit 1
+          fi
+
+          if [[ "$CATEGORY" != "Not for changelog (changelog entry is not required)" && "$CATEGORY" != "Documentation (changelog entry is not required)" ]]; then
+            ENTRY=$(echo "$DESCRIPTION" | sed -n '/### Changelog entry/,$p' | tail -n +2 | head -n 1 | xargs)
+
+            if [[ -z "$ENTRY" || ${#ENTRY} -lt 20 ]]; then
+              echo "::warning::Changelog entry is too short or missing."
+              exit 1
+            fi
+
+            if [[ "$CATEGORY" == "Bugfix" && ! "$ENTRY" =~ #[0-9]+ ]]; then
+              echo "::warning::Bugfix requires a linked issue in the changelog entry."
+              exit 1
+            fi
+          fi
+
+          echo "PR description is valid."
+
+      - name: Set status
+        if: failure()
+        run: echo "Validation failed."
